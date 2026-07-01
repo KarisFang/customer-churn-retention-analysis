@@ -1,3 +1,10 @@
+## 🖥️ Live Dashboard
+
+> **[→ View Interactive Dashboard](https://karisfang.github.io/customer-churn-retention-analysis/dashboard/index.html)**
+> Built with Chart.js · Pure SQL analysis · No BI tool required
+
+---
+
 # 📊 Customer Churn & Retention Analysis — Telecom
 
 > A beginner-level product analytics project using **pure SQL** to analyse churn drivers, segment customers by risk, and surface data-driven retention recommendations for a fictional telecom business.
