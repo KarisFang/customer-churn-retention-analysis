@@ -181,3 +181,7 @@ Or load the CSV into **DB Browser for SQLite** and run each `.sql` file in seque
 ## Contributors
 - [@KarisFang](https://github.com/KarisFang) — Analysis & SQL
 - [Claude](https://claude.ai) (Anthropic) — Code generation & dashboard
+
+## Data Sources
+- **Telecom customer dataset** — Synthetic data generated for portfolio purposes
+- **Apple Inc.** — Financial statements via [SEC EDGAR](https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=10-K&dateb=&owner=include&count=40)
