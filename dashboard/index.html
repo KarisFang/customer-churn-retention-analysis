@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Telecom Churn & Retention Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #07090F;
+    --surface:   #0E1220;
+    --surface2:  #141828;
+    --border:    #1E2436;
+    --text:      #C8CFDF;
+    --muted:     #5A6280;
+    --accent:    #3B82F6;
+    --churn:     #F43F5E;
+    --safe:      #10B981;
+    --warn:      #F59E0B;
+    --mono:      'IBM Plex Mono', monospace;
+    --sans:      'IBM Plex Sans', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 36px 48px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .header-left .eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  header h1 {
+    font-size: 26px;
+    font-weight: 600;
+    color: #E8EDFB;
+    letter-spacing: -.02em;
+  }
+  header h1 span { color: var(--churn); }
+  .header-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    line-height: 1.8;
+  }
+
+  /* ── Layout ── */
+  main { padding: 40px 48px 60px; max-width: 1400px; }
+
+  section + section { margin-top: 56px; }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── KPI Cards ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .kpi-card:hover { border-color: var(--accent); }
+  .kpi-card .bar-accent {
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    border-radius: 8px 0 0 8px;
+  }
+  .kpi-card.danger .bar-accent  { background: var(--churn); }
+  .kpi-card.safe .bar-accent    { background: var(--safe); }
+  .kpi-card.neutral .bar-accent { background: var(--accent); }
+  .kpi-card.warn .bar-accent    { background: var(--warn); }
+
+  .kpi-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .kpi-value {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .kpi-card.danger .kpi-value  { color: var(--churn); }
+  .kpi-card.safe .kpi-value    { color: var(--safe); }
+  .kpi-card.neutral .kpi-value { color: var(--accent); }
+  .kpi-card.warn .kpi-value    { color: var(--warn); }
+
+  .kpi-sub { font-size: 12px; color: var(--muted); }
+
+  /* ── Chart Grid ── */
+  .chart-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .chart-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px 24px 20px;
+  }
+  .chart-card.wide {
+    grid-column: span 2;
+  }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #D0D7EC;
+    margin-bottom: 4px;
+  }
+  .chart-insight {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .chart-insight strong { color: var(--churn); }
+
+  /* ── Risk Tier Table ── */
+  .risk-table { width: 100%; border-collapse: collapse; }
+  .risk-table th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .risk-table td {
+    padding: 12px 12px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .risk-table tr:last-child td { border-bottom: none; }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .badge-high   { background: rgba(244,63,94,.15);  color: var(--churn); }
+  .badge-medium { background: rgba(245,158,11,.12); color: var(--warn); }
+  .badge-low    { background: rgba(16,185,129,.10); color: var(--safe); }
+
+  /* ── Rev bar ── */
+  .rev-bar-wrap { display: flex; align-items: center; gap: 10px; }
+  .rev-bar-bg { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; }
+  .rev-bar-fill { height: 6px; border-radius: 3px; }
+  .rev-label { font-size: 12px; color: var(--text); min-width: 70px; text-align: right; }
+
+  /* ── Insight callout ── */
+  .callout-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .callout {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+  }
+  .callout-icon { font-size: 18px; margin-bottom: 8px; }
+  .callout-head {
+    font-size: 12px;
+    font-weight: 600;
+    color: #D0D7EC;
+    margin-bottom: 6px;
+  }
+  .callout-body { font-size: 12px; color: var(--muted); line-height: 1.55; }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    margin: 60px 48px 0;
+    padding: 20px 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  canvas { display: block; }
+
+  @media (max-width: 900px) {
+    header, main, footer { padding-left: 20px; padding-right: 20px; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .chart-grid-2, .chart-grid-3 { grid-template-columns: 1fr; }
+    .chart-card.wide { grid-column: span 1; }
+    .callout-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <p class="eyebrow">Product Analytics · Telecom</p>
+    <h1>Customer <span>Churn</span> &amp; Retention Dashboard</h1>
+  </div>
+  <div class="header-meta">
+    <div>n = 200 customers</div>
+    <div>Tool: SQL (DuckDB)</div>
+    <div>Analyst: Karis Fang</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- KPIs -->
+  <section>
+    <div class="section-label">01 — Key metrics</div>
+    <div class="kpi-grid">
+      <div class="kpi-card danger">
+        <div class="bar-accent"></div>
+        <div class="kpi-label">Churn Rate</div>
+        <div class="kpi-value">36.5%</div>
+        <div class="kpi-sub">73 of 200 customers lost</div>
+      </div>
+      <div class="kpi-card warn">
+        <div class="bar-accent"></div>
+        <div class="kpi-label">Monthly Rev Lost</div>
+        <div class="kpi-value">$5,288</div>
+        <div class="kpi-sub">from churned customers</div>
+      </div>
+      <div class="kpi-card safe">
+        <div class="bar-accent"></div>
+        <div class="kpi-label">Monthly Rev Retained</div>
+        <div class="kpi-value">$8,274</div>
+        <div class="kpi-sub">from 127 active customers</div>
+      </div>
+      <div class="kpi-card neutral">
+        <div class="bar-accent"></div>
+        <div class="kpi-label">Avg Tenure – Churned</div>
+        <div class="kpi-value">34.8<span style="font-size:16px;font-weight:400"> mo</span></div>
+        <div class="kpi-sub">vs 39.2 mo for retained</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Row 1: Contract + Tenure -->
+  <section>
+    <div class="section-label">02 — Churn by segment</div>
+    <div class="chart-grid-2">
+
+      <div class="chart-card">
+        <div class="chart-title">Churn Rate by Contract Type</div>
+        <div class="chart-insight">Month-to-month customers churn at <strong>47.7%</strong> — more than 2× the rate of annual contracts.</div>
+        <canvas id="contractChart" height="200"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Churn Rate by Tenure Bucket</div>
+        <div class="chart-insight">The <strong>6–11 month window peaks at 60.9%</strong> — the critical early-life danger zone.</div>
+        <canvas id="tenureChart" height="200"></canvas>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Row 2: Internet + Payment -->
+  <section>
+    <div class="chart-grid-2">
+
+      <div class="chart-card">
+        <div class="chart-title">Churn Rate by Internet Service</div>
+        <div class="chart-insight"><strong>Fiber optic churns at 46.7%</strong> — these are higher-paying customers, making this a priority issue.</div>
+        <canvas id="internetChart" height="200"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Churn Rate by Payment Method</div>
+        <div class="chart-insight">Mailed check has the highest churn at 41.7%. Auto-pay methods correlate with better retention.</div>
+        <canvas id="paymentChart" height="200"></canvas>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Row 3: Risk breakdown -->
+  <section>
+    <div class="section-label">03 — Risk segmentation (rule-based, no ML)</div>
+    <div class="chart-grid-2">
+
+      <div class="chart-card">
+        <div class="chart-title">Retained Customers by Risk Tier</div>
+        <div class="chart-insight">Risk score = sum of 5 churn-driver flags per customer. <strong>61 retained customers</strong> are Medium or High risk.</div>
+        <canvas id="riskChart" height="220"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">Monthly Revenue at Stake by Risk Tier</div>
+        <div class="chart-insight">High-risk customers hold <strong>$1,696/mo</strong> in revenue. Medium risk adds another $2,876 — both need proactive outreach.</div>
+
+        <table class="risk-table" style="margin-top: 8px;">
+          <thead>
+            <tr>
+              <th>Tier</th>
+              <th>Customers</th>
+              <th>Monthly Revenue</th>
+              <th style="width:40%">Share of at-risk rev</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-high">High</span></td>
+              <td>21</td>
+              <td>$1,696</td>
+              <td>
+                <div class="rev-bar-wrap">
+                  <div class="rev-bar-bg"><div class="rev-bar-fill" style="width:20%;background:var(--churn)"></div></div>
+                  <span class="rev-label">20%</span>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-medium">Medium</span></td>
+              <td>40</td>
+              <td>$2,876</td>
+              <td>
+                <div class="rev-bar-wrap">
+                  <div class="rev-bar-bg"><div class="rev-bar-fill" style="width:34%;background:var(--warn)"></div></div>
+                  <span class="rev-label">34%</span>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-low">Low</span></td>
+              <td>66</td>
+              <td>$3,701</td>
+              <td>
+                <div class="rev-bar-wrap">
+                  <div class="rev-bar-bg"><div class="rev-bar-fill" style="width:44%;background:var(--safe)"></div></div>
+                  <span class="rev-label">44%</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Retention Recommendations -->
+  <section>
+    <div class="section-label">04 — Retention recommendations</div>
+    <div class="callout-row">
+      <div class="callout">
+        <div class="callout-icon">📋</div>
+        <div class="callout-head">Contract Upgrade Campaign</div>
+        <div class="callout-body">Target month-to-month customers with 12+ months of tenure. They've proven loyalty — offer a discount to lock in an annual plan and cut their churn risk from 47.7% to ~20%.</div>
+      </div>
+      <div class="callout">
+        <div class="callout-icon">⏱️</div>
+        <div class="callout-head">Month-6 Check-in Programme</div>
+        <div class="callout-body">The 6–11 month window has a 60.9% churn rate. A proactive outreach at Month 5 — satisfaction call, usage tips, or a loyalty bonus — can dramatically reduce early-life churn.</div>
+      </div>
+      <div class="callout">
+        <div class="callout-icon">🛡️</div>
+        <div class="callout-head">Free Tech Support Trial</div>
+        <div class="callout-body">Fiber optic customers without tech support churn at the highest rate. Offering a 3-month free trial of tech support to this segment addresses both service quality and stickiness.</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span>github.com/KarisFang/customer-churn-retention-analysis</span>
+  <span>200 synthetic records · SQL only · No Python · No ML</span>
+</footer>
+
+<script>
+const CHURN   = '#F43F5E';
+const SAFE    = '#10B981';
+const ACCENT  = '#3B82F6';
+const WARN    = '#F59E0B';
+const MUTED   = '#1E2436';
+const TEXT    = '#8A94AD';
+
+Chart.defaults.color = TEXT;
+Chart.defaults.borderColor = '#1E2436';
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size = 11;
+
+// ── Shared tooltip style ──
+const tooltip = {
+  backgroundColor: '#0E1220',
+  borderColor: '#2A3050',
+  borderWidth: 1,
+  padding: 10,
+  titleColor: '#D0D7EC',
+  bodyColor: '#8A94AD',
+  cornerRadius: 6,
+};
+
+// ── Contract ──
+new Chart(document.getElementById('contractChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Month-to-month', 'Two year', 'One year'],
+    datasets: [
+      {
+        label: 'Churn Rate %',
+        data: [47.7, 26.8, 20.0],
+        backgroundColor: [CHURN, '#F59E0B66', '#10B98166'],
+        borderColor:      [CHURN, WARN, SAFE],
+        borderWidth: 1,
+        borderRadius: 4,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { plugins: { tooltip } } },
+    scales: {
+      y: { min: 0, max: 60, grid: { color: MUTED }, ticks: { callback: v => v + '%' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ── Tenure ──
+new Chart(document.getElementById('tenureChart'), {
+  type: 'bar',
+  data: {
+    labels: ['0–5 mo', '6–11 mo', '12–23 mo', '24–47 mo', '48+ mo'],
+    datasets: [{
+      label: 'Churn Rate %',
+      data: [44.4, 60.9, 33.3, 33.8, 31.5],
+      backgroundColor: ['#F43F5E99', CHURN, '#F59E0B66', '#F59E0B66', '#10B98166'],
+      borderColor:     ['#F43F5E99', CHURN, WARN, WARN, SAFE],
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { min: 0, max: 75, grid: { color: MUTED }, ticks: { callback: v => v + '%' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ── Internet ──
+new Chart(document.getElementById('internetChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Fiber optic', 'DSL', 'No internet'],
+    datasets: [{
+      label: 'Churn Rate %',
+      data: [46.7, 36.4, 28.4],
+      backgroundColor: [CHURN, '#F59E0B88', '#10B98166'],
+      borderColor:     [CHURN, WARN, SAFE],
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { min: 0, max: 60, grid: { color: MUTED }, ticks: { callback: v => v + '%' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ── Payment ──
+new Chart(document.getElementById('paymentChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Mailed check', 'Credit card', 'Electronic check', 'Bank transfer'],
+    datasets: [{
+      label: 'Churn Rate %',
+      data: [41.7, 36.1, 35.3, 34.6],
+      backgroundColor: [CHURN, '#8B5CF688', '#8B5CF644', '#10B98166'],
+      borderColor:     [CHURN, '#8B5CF6', '#8B5CF6', SAFE],
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { min: 0, max: 55, grid: { color: MUTED }, ticks: { callback: v => v + '%' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ── Risk Donut ──
+new Chart(document.getElementById('riskChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+    datasets: [{
+      data: [66, 40, 21],
+      backgroundColor: ['#10B98122', '#F59E0B33', '#F43F5E33'],
+      borderColor:     [SAFE, WARN, CHURN],
+      borderWidth: 2,
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '65%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { padding: 16, boxWidth: 12, font: { size: 11 } }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.label}: ${ctx.raw} customers`
+        }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
