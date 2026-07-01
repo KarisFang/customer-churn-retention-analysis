@@ -177,3 +177,7 @@ Or load the CSV into **DB Browser for SQLite** and run each `.sql` file in seque
 ---
 
 *Dataset is synthetic and generated for portfolio purposes only.*
+
+## Contributors
+- [@KarisFang](https://github.com/KarisFang) — Analysis & SQL
+- [Claude](https://claude.ai) (Anthropic) — Code generation & dashboard
